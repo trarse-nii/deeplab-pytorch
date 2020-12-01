@@ -22,6 +22,7 @@ from omegaconf import OmegaConf
 
 from libs.models import *
 from libs.utils import DenseCRF
+from libs.utils import metric
 
 def makedirs(path):
     if not os.path.isdir(path):
@@ -225,6 +226,13 @@ def single(config_path, model_path, image_path, output_path, cuda, crf):
 )
 @click.option(
     "-i",
+    "--label-path",
+    type=click.Path(exists=True),
+    required=True,
+    help="Dir including label images to be processed",
+)
+@click.option(
+    "-i",
     "--output-path",
     type=click.Path(exists=False),
     required=True,
@@ -235,7 +243,7 @@ def single(config_path, model_path, image_path, output_path, cuda, crf):
     "--cuda/--cpu", default=True, help="Enable CUDA if available [default: --cuda]"
 )
 @click.option("--crf", is_flag=True, show_default=True, help="CRF post-processing")
-def multi(config_path, model_path, input_path, output_path, cuda, crf):
+def multi(config_path, model_path, input_path, label_path, output_path, cuda, crf):
     """
     Inference from multi images
     """
@@ -260,13 +268,22 @@ def multi(config_path, model_path, input_path, output_path, cuda, crf):
 
     image_paths = list(Path(input_path).glob("*.jpg"))
 
-    for image_path in image_paths:
+    for n, image_path in enumerate(image_paths):
         # Inference
         print("path = " + str(image_path))
         image = cv2.imread(str(image_path), cv2.IMREAD_COLOR)
         image, raw_image = preprocessing(image, device, CONFIG)
         labelmap = inference(model, image, raw_image, postprocessor)
         labels = np.unique(labelmap)
+
+        labelmap_true = cv2.imread(str(label_path)+'/'+os.path.basename(image_path).split(".")[0] + '.png', cv2.IMREAD_GRAYSCALE)
+        labelmap_true = cv2.resize(labelmap_true, (labelmap.shape[1], labelmap.shape[0]))
+
+        print(labelmap)
+        print(labelmap_true)
+        pred_scores = metric.scores(labelmap_true, labelmap, CONFIG.DATASET.N_CLASSES)
+        print(pred_scores)
+        # とりあえず動くがpredに入っていないラベルで一部IoUがnanにならず、mIoUが極端に小さくなる事象が発生しているので要調査
 
         # save lavelmap as input of SPADE
         cv2.imwrite(output_path + '/' + os.path.basename(image_path).split(".")[0] + '.png', labelmap)
