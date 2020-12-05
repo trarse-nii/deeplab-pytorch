@@ -5,7 +5,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from metric import scores_with_labels
+from .metric import scores_with_labels
 
 def evaluate(pred_dir, label_dir):
     pred_paths = list(Path(pred_dir).glob("*.png"))
