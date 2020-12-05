@@ -218,21 +218,21 @@ def single(config_path, model_path, image_path, output_path, cuda, crf):
     help="PyTorch model to be loaded",
 )
 @click.option(
-    "-i",
+    "-ip",
     "--input-path",
     type=click.Path(exists=True),
     required=True,
     help="Dir including input images to be processed",
 )
 @click.option(
-    "-i",
+    "-lp",
     "--label-path",
     type=click.Path(exists=True),
     required=True,
     help="Dir including label images to be processed",
 )
 @click.option(
-    "-i",
+    "-op",
     "--output-path",
     type=click.Path(exists=False),
     required=True,
