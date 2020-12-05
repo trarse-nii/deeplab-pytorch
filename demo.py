@@ -22,6 +22,7 @@ from omegaconf import OmegaConf
 
 from libs.models import *
 from libs.utils import DenseCRF
+from libs.utils import metric
 
 def makedirs(path):
     if not os.path.isdir(path):
@@ -217,25 +218,32 @@ def single(config_path, model_path, image_path, output_path, cuda, crf):
     help="PyTorch model to be loaded",
 )
 @click.option(
-    "-i",
+    "-ip",
     "--input-path",
     type=click.Path(exists=True),
     required=True,
     help="Dir including input images to be processed",
 )
 @click.option(
-    "-i",
+    "-lp",
+    "--label-path",
+    type=click.Path(exists=True),
+    required=True,
+    help="Dir including label images to be processed",
+)
+@click.option(
+    "-op",
     "--output-path",
     type=click.Path(exists=False),
     required=True,
-    default="./results/multi",
+    default="./results",
     help="Path to save outputs",
 )
 @click.option(
     "--cuda/--cpu", default=True, help="Enable CUDA if available [default: --cuda]"
 )
 @click.option("--crf", is_flag=True, show_default=True, help="CRF post-processing")
-def multi(config_path, model_path, input_path, output_path, cuda, crf):
+def multi(config_path, model_path, input_path, label_path, output_path, cuda, crf):
     """
     Inference from multi images
     """
@@ -255,21 +263,41 @@ def multi(config_path, model_path, input_path, output_path, cuda, crf):
     model.to(device)
     print("Model:", CONFIG.MODEL.NAME)
 
-    makedirs(output_path)
-    makedirs("./results/demo_map")
+    makedirs(output_path + '/labelmaps')
+    makedirs(output_path + '/demo_maps')
 
     image_paths = list(Path(input_path).glob("*.jpg"))
 
-    for image_path in image_paths:
+    # 一括評価用
+    labelmaps, labelmap_trues = [], []
+    labels_true = []
+
+    for n, image_path in enumerate(image_paths):
         # Inference
-        print("path = " + str(image_path))
+        print('input path = ' + str(image_path))
+        print('label path = ' + str(label_path)+'/'+os.path.basename(image_path).split(".")[0] + '.png')
         image = cv2.imread(str(image_path), cv2.IMREAD_COLOR)
         image, raw_image = preprocessing(image, device, CONFIG)
         labelmap = inference(model, image, raw_image, postprocessor)
         labels = np.unique(labelmap)
 
+        labelmap_true = cv2.imread(str(label_path)+'/'+os.path.basename(image_path).split(".")[0] + '.png', cv2.IMREAD_GRAYSCALE)
+        labels_true = np.append(labels_true, labelmap_true)
+
+        # 正解画像のサイズに合わせる。補完はdeeplab-pytorch内でスコア評価時にバイリニア補間を使っているので倣う
+        # Colaboratory内のOpenCV 4.1.2だと一部エラーが発生する・・・。仕方ないのでbit補間版のINTER_LINEAR_EXACTを使う。
+        # https://docs.opencv.org/4.1.2/da/d54/group__imgproc__transform.html#gga5bb5a1fea74ea38e1a5445ca803ff121ac00f4a8155563cdc23437fc0959da935
+        #labelmap = cv2.resize(labelmap, (labelmap_true.shape[1], labelmap_true.shape[0]), interpolation=cv2.INTER_NEAREST)
+        #labelmap = cv2.resize(labelmap, (labelmap_true.shape[1], labelmap_true.shape[0]), interpolation=cv2.INTER_LINEAR)
+        #labelmap = cv2.resize(labelmap, (labelmap_true.shape[1], labelmap_true.shape[0]), interpolation=cv2.INTER_CUBIC)
+        #labelmap = cv2.resize(labelmap, (labelmap_true.shape[1], labelmap_true.shape[0]), interpolation=cv2.INTER_AREA)
+        labelmap = cv2.resize(labelmap, (labelmap_true.shape[1],labelmap_true.shape[0]), interpolation=cv2.INTER_LINEAR_EXACT)
+
+        labelmaps += list(np.expand_dims(labelmap, 0))
+        labelmap_trues += list(np.expand_dims(labelmap_true, 0))
+
         # save lavelmap as input of SPADE
-        cv2.imwrite(output_path + '/' + os.path.basename(image_path).split(".")[0] + '.png', labelmap)
+        cv2.imwrite(output_path + '/labelmaps/' + os.path.basename(image_path).split(".")[0] + '.png', labelmap)
 
         # Show result for each class
         rows = np.floor(np.sqrt(len(labels) + 1))
@@ -292,7 +320,17 @@ def multi(config_path, model_path, input_path, output_path, cuda, crf):
         #plt.show()
 
         # Save result for each class
-        plt.savefig('./results/demo_map/' + os.path.basename(image_path))
+        plt.savefig(output_path + '/demo_maps/' + os.path.basename(image_path))
+    
+    # 評価
+    labels = np.unique(labels_true)
+    pred_scores = metric.scores_with_labels(labelmap_trues, labelmaps, labels)
+    f = open(output_path + '/' + 'multi_result.txt', 'w')
+    for key, value in pred_scores.items():
+        f.write(f'{key} {value}\n')
+    f.close()
+
+    print("Demo Process END.")
 
 @main.command()
 @click.option(
