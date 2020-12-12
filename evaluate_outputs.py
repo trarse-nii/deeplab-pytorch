@@ -6,7 +6,7 @@ import cv2
 import numpy as np
 import click
 
-from libs.utils import evaluate
+from libs.utils import evaluate_from_dir
 
 @click.group()
 @click.pass_context
@@ -39,10 +39,39 @@ def main(ctx):
     required=True,
     help="Directory Path to save scores",
 )
-def evaluate_scores(pred_dir, label_dir, output_dir):
-    scores_all, scores_each = evaluate(pred_dir, label_dir)
-    print(scores_all)
-    print(scores_each)
+@click.option(
+    "-s",
+    "--suffix",
+    type=click.Path(exists=False),
+    required=True,
+    help="suffix of output file",
+)
+def evaluate_scores(pred_dir, label_dir, output_dir, suffix):
+    scores_all, scores_each = evaluate_from_dir(pred_dir, label_dir)
+    
+    # debug描画用
+    #print(scores_all)
+    #print(scores_each)
+
+    if not(os.path.exists(output_dir)):
+        os.makedirs(output_dir)
+
+    f_whole = open(output_dir + '/' + 'eval_whole_' + suffix + '.txt', 'w')
+    f_each = open(output_dir + '/' + 'eval_each_' + suffix + '.csv', 'w')
+
+    # カラムタイトル
+    f_each.write(f'ImgName, MeanAccuracy, FrequencyWeightedIoU, MeanIoU, ClassIoU\n')
+
+    # 値書き込み
+    for score in scores_each:
+        print('name: ' + score['name'])
+        f_each.write(f"{score['name']},{score['Mean Accuracy']},{score['Frequency Weighted IoU']},{score['Mean IoU']},{score['Class IoU']}\n")
+
+    for key, value in scores_all.items():
+        f_whole.write(f'{key}: {value}\n')
+    
+    f_whole.close()
+    f_each.close()
 
 if __name__ == "__main__":
     main()
