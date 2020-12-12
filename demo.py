@@ -281,23 +281,25 @@ def multi(config_path, model_path, input_path, label_path, output_path, cuda, cr
         labelmap = inference(model, image, raw_image, postprocessor)
         labels = np.unique(labelmap)
 
-        labelmap_true = cv2.imread(str(label_path)+'/'+os.path.basename(image_path).split(".")[0] + '.png', cv2.IMREAD_GRAYSCALE)
-        labels_true = np.append(labels_true, labelmap_true)
-
-        # 正解画像のサイズに合わせる。補完はdeeplab-pytorch内でスコア評価時にバイリニア補間を使っているので倣う
-        # Colaboratory内のOpenCV 4.1.2だと一部エラーが発生する・・・。仕方ないのでbit補間版のINTER_LINEAR_EXACTを使う。
-        # https://docs.opencv.org/4.1.2/da/d54/group__imgproc__transform.html#gga5bb5a1fea74ea38e1a5445ca803ff121ac00f4a8155563cdc23437fc0959da935
-        #labelmap = cv2.resize(labelmap, (labelmap_true.shape[1], labelmap_true.shape[0]), interpolation=cv2.INTER_NEAREST)
-        #labelmap = cv2.resize(labelmap, (labelmap_true.shape[1], labelmap_true.shape[0]), interpolation=cv2.INTER_LINEAR)
-        #labelmap = cv2.resize(labelmap, (labelmap_true.shape[1], labelmap_true.shape[0]), interpolation=cv2.INTER_CUBIC)
-        #labelmap = cv2.resize(labelmap, (labelmap_true.shape[1], labelmap_true.shape[0]), interpolation=cv2.INTER_AREA)
-        labelmap = cv2.resize(labelmap, (labelmap_true.shape[1],labelmap_true.shape[0]), interpolation=cv2.INTER_LINEAR_EXACT)
-
-        labelmaps += list(np.expand_dims(labelmap, 0))
-        labelmap_trues += list(np.expand_dims(labelmap_true, 0))
-
         # save lavelmap as input of SPADE
         cv2.imwrite(output_path + '/' + os.path.basename(image_path).split(".")[0] + '.png', labelmap)
+
+        if os.path.exists(str(label_path)+'/'+os.path.basename(image_path).split(".")[0] + '.png'):
+            labelmap_true = cv2.imread(str(label_path)+'/'+os.path.basename(image_path).split(".")[0] + '.png', cv2.IMREAD_GRAYSCALE)
+            labels_true = np.append(labels_true, labelmap_true)
+
+            # 正解画像のサイズに合わせる。補完はdeeplab-pytorch内でスコア評価時にバイリニア補間を使っているので倣う
+            # Colaboratory内のOpenCV 4.1.2だと一部エラーが発生する・・・。仕方ないのでbit補間版のINTER_LINEAR_EXACTを使う。
+            # https://docs.opencv.org/4.1.2/da/d54/group__imgproc__transform.html#gga5bb5a1fea74ea38e1a5445ca803ff121ac00f4a8155563cdc23437fc0959da935
+            #labelmap = cv2.resize(labelmap, (labelmap_true.shape[1], labelmap_true.shape[0]), interpolation=cv2.INTER_NEAREST)
+            #labelmap = cv2.resize(labelmap, (labelmap_true.shape[1], labelmap_true.shape[0]), interpolation=cv2.INTER_LINEAR)
+            #labelmap = cv2.resize(labelmap, (labelmap_true.shape[1], labelmap_true.shape[0]), interpolation=cv2.INTER_CUBIC)
+            #labelmap = cv2.resize(labelmap, (labelmap_true.shape[1], labelmap_true.shape[0]), interpolation=cv2.INTER_AREA)
+            labelmap = cv2.resize(labelmap, (labelmap_true.shape[1],labelmap_true.shape[0]), interpolation=cv2.INTER_LINEAR_EXACT)
+
+            labelmaps += list(np.expand_dims(labelmap, 0))
+            labelmap_trues += list(np.expand_dims(labelmap_true, 0))
+
 
         """使わないのでクラス別出力の一覧はコメントアウト
         # Show result for each class
