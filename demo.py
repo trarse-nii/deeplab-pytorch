@@ -297,8 +297,9 @@ def multi(config_path, model_path, input_path, label_path, output_path, cuda, cr
         labelmap_trues += list(np.expand_dims(labelmap_true, 0))
 
         # save lavelmap as input of SPADE
-        cv2.imwrite(output_path + '/labelmaps/' + os.path.basename(image_path).split(".")[0] + '.png', labelmap)
+        cv2.imwrite(output_path + '/' + os.path.basename(image_path).split(".")[0] + '.png', labelmap)
 
+        """使わないのでクラス別出力の一覧はコメントアウト
         # Show result for each class
         rows = np.floor(np.sqrt(len(labels) + 1))
         cols = np.ceil((len(labels) + 1) / rows)
@@ -307,7 +308,6 @@ def multi(config_path, model_path, input_path, label_path, output_path, cuda, cr
         ax.set_title("Input image")
         ax.imshow(raw_image[:, :, ::-1])
         ax.axis("off")
-
         for i, label in enumerate(labels):
             mask = labelmap == label
             ax = plt.subplot(rows, cols, i + 2)
@@ -321,15 +321,13 @@ def multi(config_path, model_path, input_path, label_path, output_path, cuda, cr
 
         # Save result for each class
         plt.savefig(output_path + '/demo_maps/' + os.path.basename(image_path))
-    
+        """
     # 評価
     labels = np.unique(labels_true)
     pred_scores = metric.scores_with_labels(labelmap_trues, labelmaps, labels)
-    f = open(output_path + '/' + 'multi_result.txt', 'w')
-    for key, value in pred_scores.items():
-        f.write(f'{key} {value}\n')
-    f.close()
-
+    
+    print("---WHOLE SCORES---")
+    print(pred_scores)
     print("Demo Process END.")
 
 @main.command()
