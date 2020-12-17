@@ -3,4 +3,5 @@ from .crf import DenseCRF
 from .lr_scheduler import PolynomialLR
 from .metric import scores
 from .metric import scores_with_labels
-from .evaluate import evaluate
+from .evaluate import evaluate_from_dir
+from .evaluate import evaluate_from_globlist
