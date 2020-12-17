@@ -266,7 +266,11 @@ def multi(config_path, model_path, input_path, label_path, output_path, cuda, cr
     makedirs(output_path + '/labelmaps')
     makedirs(output_path + '/demo_maps')
 
-    image_paths = list(Path(input_path).glob("*.jpg"))
+    filetypes = ["*.jpg", "*.png"]
+    image_paths = []
+
+    for filetype in filetypes:
+        image_paths.extend(Path(input_path).glob(filetype))
 
     # 一括評価用
     labelmaps, labelmap_trues = [], []
