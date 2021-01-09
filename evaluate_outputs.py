@@ -59,13 +59,31 @@ def evaluate_scores(pred_dir, label_dir, output_dir, suffix):
     f_whole = open(output_dir + '/' + 'eval_whole_' + suffix + '.txt', 'w')
     f_each = open(output_dir + '/' + 'eval_each_' + suffix + '.csv', 'w')
 
+    # クラス別スコアをカラム別で記録
+    class_iou_unique = scores_all['Class IoU']
+    max_class_num = np.array([int(n) for n in class_iou_unique.keys()]).max()
+    class_list = np.arange(max_class_num + 1)
+    class_list_str = ",".join(map(str, class_list))
+
     # カラムタイトル
-    f_each.write(f'ImgName, MeanAccuracy, FrequencyWeightedIoU, MeanIoU, ClassIoU\n')
+    column_title = 'ImgName,MeanAccuracy,FrequencyWeightedIoU,MeanIoU,' + class_list_str
+    f_each.write(f"{column_title}\n")
 
     # 値書き込み
     for score in scores_each:
+        # クラス別IoU値の配列初期化
+        class_value_list = ["" for _ in range(max_class_num + 1)]
+
         print('name: ' + score['name'])
-        f_each.write(f"{score['name']},{score['Mean Accuracy']},{score['Frequency Weighted IoU']},{score['Mean IoU']},{score['Class IoU']}\n")
+        line_str = f"{score['name']},{score['Mean Accuracy']},{score['Frequency Weighted IoU']},{score['Mean IoU']},"
+
+        for key, value in score['Class IoU'].items():
+            class_value_list[int(key)] = value
+
+        class_value_str = ",".join(map(str,class_value_list))
+        line_str += class_value_str
+
+        f_each.write(f"{line_str}\n")
 
     for key, value in scores_all.items():
         f_whole.write(f'{key}: {value}\n')
