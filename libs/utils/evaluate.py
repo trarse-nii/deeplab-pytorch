@@ -19,7 +19,7 @@ def evaluate_from_dir(pred_dir, label_dir):
         if os.path.exists(str(label_dir)+'/'+os.path.basename(pred_path)):
             label_img  = cv2.imread(str(label_dir)+'/'+os.path.basename(pred_path), cv2.IMREAD_GRAYSCALE)
         else:
-            print(os.path.basename(pred_path) + "is not exists in label_dir")
+            print(os.path.basename(pred_path) + " is not exists in label_dir")
             continue
 
         pred_img = cv2.resize(pred_img, (label_img.shape[1],label_img.shape[0]), interpolation=cv2.INTER_LINEAR_EXACT)
@@ -32,8 +32,7 @@ def evaluate_from_dir(pred_dir, label_dir):
         
         labels = np.unique(label_img)
         labels_true = np.append(labels_true, label_img)
-
-        pred_scores = scores_with_labels(label_img_ex, pred_img_ex, labels)
+        pred_scores = scores_with_labels(label_img_ex, pred_img_ex, np.arange(182)) #クラス数直打ちしているのでデータセット変える場合は要修正
         pred_scores["name"] = os.path.basename(pred_path)
         scores_each += list([pred_scores])
 
@@ -70,7 +69,7 @@ def evaluate_from_globlist(pred_paths, label_paths):
         labels = np.unique(label_img)
         labels_true = np.append(labels_true, label_img)
 
-        pred_scores = scores_with_labels(label_img_ex, pred_img_ex, labels)
+        pred_scores = scores_with_labels(label_img_ex, pred_img_ex, np.arange(182)) #クラス数直打ちしているのでデータセット変える場合は要修正
         pred_scores["name"] = os.path.basename(pred_path)
         scores_each += list([pred_scores])
 
